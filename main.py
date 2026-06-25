@@ -11,7 +11,7 @@ from app.agent import build_agent
 async def main():
     agent = build_agent()
 
-    entry = InputAgentState(messages=[HumanMessage('Quanto é 10 + 2 e o resultado disso multiplicado por 2?')])
+    entry = InputAgentState(messages=[HumanMessage('Quais são as últimas notícias sobre inteligência artificial?')])
     response = await agent.ainvoke(entry)
 
     print(response)
