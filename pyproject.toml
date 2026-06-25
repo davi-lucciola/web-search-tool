@@ -10,6 +10,7 @@ dependencies = [
     "langgraph>=1.2.6",
     "pydantic-settings>=2.14.2",
     "rich>=15.0.0",
+    "tavily-python>=0.7.26",
 ]
 
 [dependency-groups]

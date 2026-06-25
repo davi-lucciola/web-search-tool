@@ -1,46 +1,20 @@
+from typing import cast
+
 from langchain.tools import tool
 
-
-type number = int | float
-
-
-@tool
-def add(a: number, b: number) -> number:
-    """Add a + b and returns the result
-
-    Args:
-        a: number addend
-        b: number addend
-
-    Returns:
-        the resulting float of the equation a + b
-    """
-    return a + b
+from app.tavily import TavilySearchResponse, get_tavily_client
 
 
 @tool
-def subtract(a: number, b: number) -> number:
-    """Subtract a - b and returns the result
+async def web_search(query: str) -> TavilySearchResponse:
+    """Search the internet for the given query and returns the results
 
     Args:
-        a: number minuend
-        b: number subtrahend
+        query: the search terms to look up on the internet
 
     Returns:
-        the resulting float of the equation a - b
+        the Tavily search response containing the answer and the list of result sources
     """
-    return a - b
-
-
-@tool
-def multiply(a: number, b: number) -> number:
-    """Multiply a * b and returns the result
-
-    Args:
-        a: number mutiplicant
-        b: number multiplier
-
-    Returns:
-        the resulting float of the equation a * b
-    """
-    return a * b
+    client = get_tavily_client()
+    response = await client.search(query)
+    return cast(TavilySearchResponse, response)
