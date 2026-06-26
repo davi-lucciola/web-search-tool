@@ -1,6 +1,6 @@
 import asyncio
 
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage
 
 from rich import print
 
@@ -12,7 +12,18 @@ async def main():
     agent = build_agent()
 
     state: ChatState = {
-        'messages': [HumanMessage('Olá, tudo bom?')],
+        'messages': [
+            HumanMessage('Olá, tudo bom?'),
+            AIMessage(
+                'Olá! Tudo ótimo, obrigado por perguntar. '
+                'Seja bem-vindo(a)! Estou aqui para ajudar você a '
+                'encontrar o produto com o melhor custo-benefício para '
+                'a sua necessidade. Como posso te ajudar hoje?'
+            ),
+            HumanMessage(
+                'Qual é o melhor celular para tirar fotos que eu posso comprar com 1600 reais?'
+            ),
+        ],
         'next': '',
     }
     response = await agent.ainvoke(state)
