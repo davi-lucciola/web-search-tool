@@ -1,16 +1,16 @@
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langgraph.types import interrupt
 
-from app.agents.product_search.constants import Nodes
-from app.agents.product_search.prompt import EXTRACT_REQUIREMENTS_PROMPT
-from app.agents.product_search.schemas import (
+from app.agents.products.constants import Nodes
+from app.agents.products.prompt import EXTRACT_REQUIREMENTS_PROMPT
+from app.agents.products.schemas import (
     CollectedInfo,
     Product,
     ProductChoice,
     Requirements,
 )
-from app.agents.product_search.state import ProductSearchState
-from app.agents.product_search.tools import (
+from app.agents.products.state import ProductSearchState
+from app.agents.products.tools import (
     deep_search_purchase_links,
     search_candidates,
 )

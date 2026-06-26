@@ -5,7 +5,7 @@ class Agents(StrEnum):
     """Agentes para os quais o supervisor pode rotear a conversa."""
 
     GUIDE = 'guide'
-    PRODUCT_SEARCH = 'product-search'
+    PRODUCTS = 'products'
 
 
 class Nodes(StrEnum):
@@ -13,7 +13,7 @@ class Nodes(StrEnum):
 
     SUPERVISOR = 'supervisor'
     GUIDE = 'guide'
-    PRODUCT_SEARCH = 'product-search'
+    PRODUCTS = 'products'
 
 
 AGENTS_DESCRIPTION: dict[Agents, str] = {
@@ -21,7 +21,7 @@ AGENTS_DESCRIPTION: dict[Agents, str] = {
         'Agente que irá recepcionar e guiar o usuário, conduzirá a conversa '
         'explicando sobre o bot até que o deseje realizar alguma operação.'
     ),
-    Agents.PRODUCT_SEARCH: (
+    Agents.PRODUCTS: (
         'Agente que irá guiar o fluxo de busca de um produto, ele pedirá '
         'para o usuário principalmente informações como orçamento disponivel '
         'e o problema que ele deseja solucionar. Aqui o usuário também pode achar os links de compra do produto.'
