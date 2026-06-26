@@ -1,7 +1,7 @@
 from langgraph.graph import END, START, StateGraph
 
-from app.agents.product_search.constants import Nodes
-from app.agents.product_search.nodes import (
+from app.agents.products.constants import Nodes
+from app.agents.products.nodes import (
     collect_requirements_node,
     present_recommendations_node,
     route_after_collect,
@@ -10,7 +10,7 @@ from app.agents.product_search.nodes import (
     search_purchase_links_node,
     validate_products_node,
 )
-from app.agents.product_search.state import ProductSearchState
+from app.agents.products.state import ProductSearchState
 
 
 def build_product_search_agent():

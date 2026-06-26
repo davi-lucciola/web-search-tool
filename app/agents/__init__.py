@@ -3,7 +3,7 @@ from langgraph.graph import END, START, StateGraph
 
 from app.agents.constants import Agents, Nodes
 from app.agents.guide import build_guide_node
-from app.agents.product_search import build_product_search_node
+from app.agents.products import build_product_search_node
 from app.agents.states import ChatState
 from app.agents.supervisor import build_supervisor_node
 
@@ -13,7 +13,7 @@ def build_agent(checkpointer: BaseCheckpointSaver | None = None):
 
     builder.add_node(Nodes.SUPERVISOR, build_supervisor_node())
     builder.add_node(Nodes.GUIDE, build_guide_node())
-    builder.add_node(Nodes.PRODUCT_SEARCH, build_product_search_node())
+    builder.add_node(Nodes.PRODUCTS, build_product_search_node())
 
     builder.add_edge(START, Nodes.SUPERVISOR)
 
@@ -21,7 +21,7 @@ def build_agent(checkpointer: BaseCheckpointSaver | None = None):
         return state['next']
 
     builder.add_conditional_edges(Nodes.SUPERVISOR, get_next, {k: k for k in Agents})
-    builder.add_edge([Nodes.GUIDE, Nodes.PRODUCT_SEARCH], END)
+    builder.add_edge([Nodes.GUIDE, Nodes.PRODUCTS], END)
 
     return builder.compile(checkpointer=checkpointer)
 
