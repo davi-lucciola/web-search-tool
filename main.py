@@ -1,18 +1,21 @@
 import asyncio
 
-from langchain.agents.middleware.types import InputAgentState
 from langchain_core.messages import HumanMessage
 
 from rich import print
 
-from app.agent import build_agent
+from app.agents import build_agent
+from app.agents.states import ChatState
 
 
 async def main():
     agent = build_agent()
 
-    entry = InputAgentState(messages=[HumanMessage('Quais são as últimas notícias sobre inteligência artificial?')])
-    response = await agent.ainvoke(entry)
+    state: ChatState = {
+        'messages': [HumanMessage('Olá, tudo bom?')],
+        'next': '',
+    }
+    response = await agent.ainvoke(state)
 
     print(response)
 
