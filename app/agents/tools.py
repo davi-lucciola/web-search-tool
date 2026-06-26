@@ -1,7 +1,9 @@
 from typing import cast
 
+import json
 from langchain.tools import tool
 
+from rich.console import Console
 from app.tavily import TavilySearchResponse, get_tavily_client
 
 
@@ -16,5 +18,7 @@ async def web_search(query: str) -> TavilySearchResponse:
         the Tavily search response containing the answer and the list of result sources
     """
     client = get_tavily_client()
-    response = await client.search(query)
+    response = await client.search(query, contry='brazil')
+
+    Console().print_json(json.dumps(response), indent=4)
     return cast(TavilySearchResponse, response)
