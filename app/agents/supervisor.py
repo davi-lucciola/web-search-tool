@@ -32,4 +32,5 @@ async def supervisor_agent(state: ChatState):
     router = await llm.ainvoke(messages)
 
     assert isinstance(router, Router)
-    return {'next': router.next}
+    # Grava a string pura (não o enum) para serializar de forma estável no checkpoint.
+    return {'next': router.next.value}
