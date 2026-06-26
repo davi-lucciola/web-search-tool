@@ -1,6 +1,6 @@
 import re
 from decimal import Decimal, InvalidOperation
-from typing import Annotated
+from typing import Annotated, TypedDict
 
 from langchain.agents import AgentState
 from pydantic import BaseModel, Field, field_validator
@@ -103,6 +103,63 @@ class PurchaseLinks(BaseModel):
     )
 
 
-class ProductSearch(AgentState):
-    budget: float
-    products: list[Product]
+class Requirements(BaseModel):
+    product_type: str | None = Field(
+        default=None,
+        description='Tipo/categoria do produto procurado, ex. "celular", "notebook".',
+    )
+    use_case: str | None = Field(
+        default=None,
+        description='Para que o usuário vai usar o produto, ex. "tirar fotos", "jogar".',
+    )
+    priorities: list[str] = Field(
+        default_factory=list,
+        description='Características mais importantes para o usuário, ex. ["câmera", "bateria"].',
+    )
+    brand_preferences: list[str] = Field(
+        default_factory=list,
+        description='Marcas preferidas ou a evitar informadas pelo usuário.',
+    )
+    must_haves: list[str] = Field(
+        default_factory=list,
+        description='Requisitos obrigatórios/inegociáveis, ex. ["5G", "à prova d\'água"].',
+    )
+
+    @field_validator('priorities', 'brand_preferences', 'must_haves', mode='before')
+    @classmethod
+    def _coerce_none_to_empty_list(cls, value: object) -> object:
+        # O LLM costuma emitir null em vez de [] quando o campo está vazio.
+        return value if value is not None else []
+
+    @property
+    def is_complete(self) -> bool:
+        """Há dados suficientes para iniciar a busca: tipo de produto + uso ou prioridade."""
+        return bool(self.product_type) and bool(self.use_case or self.priorities)
+
+
+# Formato JSON-native dos modelos guardados no estado do sub-grafo. Espelham o
+# `model_dump(mode='json')` dos respectivos modelos pydantic (Decimal vira string no
+# modo json). Guardar dicts tipados — e não objetos pydantic — evita que o checkpointer
+# tenha de desserializar tipos "não registrados" (msgpack), o que será bloqueado no futuro.
+class RequirementsDict(TypedDict):
+    product_type: str | None
+    use_case: str | None
+    priorities: list[str]
+    brand_preferences: list[str]
+    must_haves: list[str]
+
+
+class ProductDict(TypedDict):
+    name: str
+    brand: str | None
+    estimated_price: str | None  # Decimal serializado como string (mode='json').
+    reason: str
+    key_features: list[str]
+
+
+class ProductSearchState(AgentState):
+    requirements: RequirementsDict | None
+    budget: float | None
+    products: list[ProductDict]
+    chosen_product: ProductDict | None
+    search_attempts: int
