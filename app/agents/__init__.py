@@ -1,29 +1,27 @@
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
 
-from app.agents.constants import Agents, AllowedAgents
-from app.agents.guide import guide_agent
-from app.agents.product_search import product_search_agent
+from app.agents.constants import Agents, Nodes
+from app.agents.guide import build_guide_node
+from app.agents.product_search import build_product_search_node
 from app.agents.states import ChatState
-from app.agents.supervisor import supervisor_agent
+from app.agents.supervisor import build_supervisor_node
 
 
 def build_agent(checkpointer: BaseCheckpointSaver | None = None):
     builder = StateGraph(state_schema=ChatState)
 
-    builder.add_node(Agents.SUPERVISOR, supervisor_agent)
-    builder.add_node(Agents.GUIDE, guide_agent)
-    builder.add_node(Agents.PRODUCT_SEARCH, product_search_agent)
+    builder.add_node(Nodes.SUPERVISOR, build_supervisor_node())
+    builder.add_node(Nodes.GUIDE, build_guide_node())
+    builder.add_node(Nodes.PRODUCT_SEARCH, build_product_search_node())
 
-    builder.add_edge(START, Agents.SUPERVISOR)
+    builder.add_edge(START, Nodes.SUPERVISOR)
 
     def get_next(state: ChatState):
         return state['next']
 
-    builder.add_conditional_edges(
-        Agents.SUPERVISOR, get_next, {k: k for k in AllowedAgents}
-    )
-    builder.add_edge([Agents.GUIDE, Agents.PRODUCT_SEARCH], END)
+    builder.add_conditional_edges(Nodes.SUPERVISOR, get_next, {k: k for k in Agents})
+    builder.add_edge([Nodes.GUIDE, Nodes.PRODUCT_SEARCH], END)
 
     return builder.compile(checkpointer=checkpointer)
 
