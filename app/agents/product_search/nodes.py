@@ -1,28 +1,19 @@
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
-from pydantic import BaseModel, Field, field_validator
 
-from app.agents.states import (
+from app.agents.product_search.prompt import EXTRACT_REQUIREMENTS_PROMPT
+from app.agents.product_search.schemas import (
+    CollectedInfo,
     Product,
-    ProductSearchState,
+    ProductChoice,
     Requirements,
 )
-from app.agents.tools import deep_search_purchase_links, search_candidates
+from app.agents.product_search.state import ProductSearchState
+from app.agents.product_search.tools import (
+    deep_search_purchase_links,
+    search_candidates,
+)
 from app.llm import get_llm
-
-
-# --------------------------------------------------------------------------- #
-# Helpers de (de)serialização: o estado guarda dicts JSON-native (TypedDict);
-# os nós reconstroem os modelos pydantic só quando precisam da lógica/validators.
-# --------------------------------------------------------------------------- #
-def _requirements_from_state(state: ProductSearchState) -> Requirements | None:
-    req = state.get('requirements')
-    return Requirements.model_validate(req) if req is not None else None
-
-
-def _products_from_state(state: ProductSearchState) -> list[Product]:
-    return [Product.model_validate(p) for p in state.get('products', [])]
 
 
 # Nomes dos nós do sub-grafo (também aparecem assim no LangGraph Studio).
@@ -39,53 +30,21 @@ TOP_PRODUCTS = 3
 
 
 # --------------------------------------------------------------------------- #
+# Helpers de (de)serialização: o estado guarda dicts JSON-native (TypedDict);
+# os nós reconstroem os modelos pydantic só quando precisam da lógica/validators.
+# --------------------------------------------------------------------------- #
+def _requirements_from_state(state: ProductSearchState) -> Requirements | None:
+    req = state.get('requirements')
+    return Requirements.model_validate(req) if req is not None else None
+
+
+def _products_from_state(state: ProductSearchState) -> list[Product]:
+    return [Product.model_validate(p) for p in state.get('products', [])]
+
+
+# --------------------------------------------------------------------------- #
 # Coleta de requisitos
 # --------------------------------------------------------------------------- #
-class CollectedInfo(BaseModel):
-    """Modelo achatado de extração (modelos menores erram com schema aninhado)."""
-
-    product_type: str | None = Field(
-        default=None, description='Tipo/categoria do produto, ex. "celular".'
-    )
-    use_case: str | None = Field(
-        default=None, description='Para que o usuário vai usar o produto.'
-    )
-    priorities: list[str] = Field(
-        default_factory=list, description='Características mais importantes.'
-    )
-    brand_preferences: list[str] = Field(
-        default_factory=list, description='Marcas preferidas ou a evitar.'
-    )
-    must_haves: list[str] = Field(
-        default_factory=list, description='Requisitos obrigatórios.'
-    )
-    budget: float | None = Field(
-        default=None,
-        description='Orçamento máximo do usuário em reais (BRL), se informado. Null se não.',
-    )
-
-    @field_validator('priorities', 'brand_preferences', 'must_haves', mode='before')
-    @classmethod
-    def _coerce_none_to_empty_list(cls, value: object) -> object:
-        return value if value is not None else []
-
-    def to_requirements(self) -> Requirements:
-        return Requirements(
-            product_type=self.product_type,
-            use_case=self.use_case,
-            priorities=self.priorities,
-            brand_preferences=self.brand_preferences,
-            must_haves=self.must_haves,
-        )
-
-
-EXTRACT_REQUIREMENTS_PROMPT = """
-Você é um consultor de compras. A partir do histórico da conversa, extraia os requisitos do
-usuário e o orçamento. Preencha apenas o que o usuário realmente disse; deixe campos vazios/null
-quando a informação não estiver presente. Não invente dados. Responda em português do Brasil.
-"""
-
-
 async def _extract_info(messages: list) -> CollectedInfo:
     llm = get_llm().with_structured_output(CollectedInfo, method='function_calling')
     info = await llm.ainvoke([SystemMessage(EXTRACT_REQUIREMENTS_PROMPT), *messages])
@@ -106,7 +65,7 @@ def _next_question(info: CollectedInfo) -> str | None:
     return None
 
 
-async def collect_requirements(state: ProductSearchState):
+async def collect_requirements_node(state: ProductSearchState):
     info = await _extract_info(list(state['messages']))
     question = _next_question(info)
 
@@ -139,7 +98,7 @@ def route_after_collect(state: ProductSearchState):
 # --------------------------------------------------------------------------- #
 # Busca e validação
 # --------------------------------------------------------------------------- #
-async def search_products(state: ProductSearchState):
+async def search_products_node(state: ProductSearchState):
     attempts = state.get('search_attempts', 0)
     requirements = _requirements_from_state(state)
     assert requirements is not None
@@ -156,7 +115,7 @@ async def search_products(state: ProductSearchState):
     }
 
 
-async def validate_products(state: ProductSearchState):
+async def validate_products_node(state: ProductSearchState):
     """Reflexão: descarta itens fora do orçamento; o roteamento decide se re-busca."""
     products = _products_from_state(state)
     budget = state.get('budget')
@@ -201,15 +160,6 @@ def _format_recommendations(products: list[Product]) -> str:
     return '\n\n'.join(lines)
 
 
-class ProductChoice(BaseModel):
-    index: int = Field(
-        description=(
-            'Número (1 a N) do produto escolhido pelo usuário. Use 1 se ele pedir o mais '
-            'recomendado ou não especificar claramente.'
-        )
-    )
-
-
 async def _resolve_choice(answer: str, products: list[Product]) -> Product:
     options = '\n'.join(
         f'{i}. {p.name}' for i, p in enumerate(products[:TOP_PRODUCTS], start=1)
@@ -228,7 +178,7 @@ async def _resolve_choice(answer: str, products: list[Product]) -> Product:
     return products[index]
 
 
-async def present_recommendations(state: ProductSearchState):
+async def present_recommendations_node(state: ProductSearchState):
     products = _products_from_state(state)
     presentation = _format_recommendations(products)
 
@@ -263,42 +213,9 @@ def _format_links_message(product: Product, links) -> str:
     return '\n'.join(lines)
 
 
-async def search_purchase_links(state: ProductSearchState):
+async def search_purchase_links_node(state: ProductSearchState):
     chosen = state.get('chosen_product')
     assert chosen is not None
     product = Product.model_validate(chosen)
     links = await deep_search_purchase_links(product)
     return {'messages': [AIMessage(_format_links_message(product, links))]}
-
-
-# --------------------------------------------------------------------------- #
-# Construção do sub-grafo
-# --------------------------------------------------------------------------- #
-def build_product_search_subgraph():
-    builder = StateGraph(ProductSearchState)
-
-    builder.add_node(NODE_COLLECT, collect_requirements)
-    builder.add_node(NODE_SEARCH, search_products)
-    builder.add_node(NODE_VALIDATE, validate_products)
-    builder.add_node(NODE_PRESENT, present_recommendations)
-    builder.add_node(NODE_LINKS, search_purchase_links)
-
-    builder.add_edge(START, NODE_COLLECT)
-    builder.add_conditional_edges(
-        NODE_COLLECT, route_after_collect, [NODE_COLLECT, NODE_SEARCH]
-    )
-    builder.add_edge(NODE_SEARCH, NODE_VALIDATE)
-    builder.add_conditional_edges(
-        NODE_VALIDATE, route_after_validate, [NODE_SEARCH, NODE_PRESENT]
-    )
-    builder.add_edge(NODE_PRESENT, NODE_LINKS)
-    builder.add_edge(NODE_LINKS, END)
-
-    # Compilado sem checkpointer: o checkpointer do grafo pai propaga para o sub-grafo.
-    return builder.compile()
-
-
-# Sub-grafo compilado usado como nó no grafo principal. Como é um grafo compilado
-# (e não uma função), o LangGraph o trata como sub-grafo e o checkpointer do pai
-# propaga, permitindo que os interrupt() funcionem entre os turnos.
-product_search_agent = build_product_search_subgraph()

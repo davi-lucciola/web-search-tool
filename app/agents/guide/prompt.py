@@ -1,9 +1,3 @@
-from langchain_core.messages import SystemMessage
-
-from app.agents.states import ChatState
-from app.llm import get_llm
-
-
 GUIDE_SYSTEM_PROMPT = """
 Você é o agente de recepção de um assistente conversacional que ajuda usuários a
 encontrar o produto com melhor custo-benefício para o orçamento e a necessidade deles.
@@ -38,13 +32,3 @@ entender como o assistente pode ajudá-lo.
 
 Mantenha as respostas concisas, cordiais e fáceis de entender.
 """
-
-
-async def guide_agent(state: ChatState):
-    llm = get_llm()
-
-    system_message = SystemMessage(GUIDE_SYSTEM_PROMPT)
-    messages = [system_message, *state['messages']]
-    ai_message = await llm.ainvoke(messages)
-
-    return {'messages': [ai_message]}

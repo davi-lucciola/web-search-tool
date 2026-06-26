@@ -2,10 +2,13 @@ from typing import cast
 
 from langchain_core.exceptions import OutputParserException
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_core.prompts import SystemMessagePromptTemplate
 from pydantic import ValidationError
 
-from app.agents.states import (
+from app.agents.product_search.prompt import (
+    FIND_PRODUCTS_PROMPT,
+    FIND_PURCHASE_LINKS_PROMPT,
+)
+from app.agents.product_search.schemas import (
     Product,
     ProductRecommendations,
     PurchaseLink,
@@ -78,20 +81,6 @@ def _build_search_queries(
     return list(dict.fromkeys(q for q in queries if q.strip()))
 
 
-FIND_PRODUCTS_PROMPT = """
-Você é um especialista em produtos e custo-benefício. A partir dos resultados de busca
-fornecidos, identifique os 3 modelos de produto mais adequados para a necessidade e o
-orçamento do usuário.
-
-Regras:
-- Retorne exatamente 3 produtos, ordenados do melhor para o pior custo-benefício.
-- Considere apenas modelos cujo preço aproximado caiba no orçamento informado.
-- Baseie-se somente nas informações dos resultados; não invente modelos ou preços.
-- Para cada produto, preencha o motivo da indicação considerando as prioridades do usuário.
-- Escreva os textos em português do Brasil.
-"""
-
-
 async def search_candidates(
     requirements: Requirements, budget: float | None, refine_hint: str | None = None
 ) -> list[Product]:
@@ -136,20 +125,6 @@ async def search_candidates(
 
     assert isinstance(recommendations, ProductRecommendations)
     return recommendations.products
-
-
-FIND_PURCHASE_LINKS_PROMPT = SystemMessagePromptTemplate.from_template("""
-Você é um especialista em encontrar onde comprar produtos online no Brasil. A partir dos
-resultados de busca e do conteúdo extraído das páginas, extraia até {quantity} links de compra
-para o produto informado.
-
-Regras:
-- Priorize as lojas Amazon, Mercado Livre e Shopee, nessa ordem de preferência.
-- Retorne no máximo {quantity} links, cada um de uma loja diferente quando possível.
-- Use somente URLs presentes nos resultados; não invente links.
-- Preencha o preço apenas quando ele estiver claramente disponível nos resultados.
-- Escreva os textos em português do Brasil.
-""")
 
 
 async def deep_search_purchase_links(
