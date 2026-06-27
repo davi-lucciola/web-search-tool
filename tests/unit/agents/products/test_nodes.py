@@ -1,8 +1,7 @@
 from decimal import Decimal
-from typing import Any, cast
+from typing import cast
 
 import pytest
-from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, HumanMessage
 from pytest_mock import MockerFixture
 
@@ -27,6 +26,7 @@ from app.agents.products.schemas import (
     Requirements,
 )
 from app.agents.products.state import ProductDict, ProductSearchState, RequirementsDict
+from tests.utils import patch_structured_llm
 
 
 # --------------------------------------------------------------------------- #
@@ -56,27 +56,6 @@ COMPLETE_REQUIREMENTS: RequirementsDict = {
 }
 
 
-def patch_structured_llm(
-    mocker: MockerFixture,
-    *,
-    structured_return: Any,
-    plain_return: Any | None = None,
-):
-    """Injeta um get_llm cujo `with_structured_output(...).ainvoke` e `.ainvoke`
-    são AsyncMock acessíveis para asserção."""
-    structured_ainvoke = mocker.AsyncMock(return_value=structured_return)
-    structured_llm = mocker.AsyncMock()
-    mocker.patch.object(structured_llm, "ainvoke", structured_ainvoke)
-
-    plain_ainvoke = mocker.AsyncMock(return_value=plain_return)
-    llm = mocker.AsyncMock(BaseChatModel)
-    mocker.patch.object(llm, "ainvoke", plain_ainvoke)
-    mocker.patch.object(llm, "with_structured_output", return_value=structured_llm)
-
-    mocker.patch.object(products_nodes, "get_llm", return_value=llm)
-    return structured_ainvoke, plain_ainvoke
-
-
 # --------------------------------------------------------------------------- #
 # collect_requirements_node
 # --------------------------------------------------------------------------- #
@@ -84,11 +63,12 @@ def patch_structured_llm(
 async def test_collect_ask_pass_incomplete_returns_question(
     mocker: MockerFixture,
 ) -> None:
-    structured_ainvoke, plain_ainvoke = patch_structured_llm(
+    llm, structured_ainvoke, _ = patch_structured_llm(
         mocker,
+        products_nodes,
         structured_return=CollectedInfo(),  # nada coletado -> incompleto
-        plain_return=AIMessage("Que tipo de produto você procura?"),
     )
+    llm.ainvoke.return_value = AIMessage("Que tipo de produto você procura?")
 
     state: ProductSearchState = {  # type: ignore
         "messages": [HumanMessage("oi")],
@@ -99,15 +79,16 @@ async def test_collect_ask_pass_incomplete_returns_question(
     assert isinstance(result["messages"][0], AIMessage)
     assert result["messages"][0].content == "Que tipo de produto você procura?"
     structured_ainvoke.assert_awaited_once()
-    plain_ainvoke.assert_awaited_once()
+    llm.ainvoke.assert_awaited_once()
 
 
 @pytest.mark.anyio
 async def test_collect_ask_pass_complete_has_no_question(
     mocker: MockerFixture,
 ) -> None:
-    structured_ainvoke, plain_ainvoke = patch_structured_llm(
+    llm, structured_ainvoke, _ = patch_structured_llm(
         mocker,
+        products_nodes,
         structured_return=CollectedInfo(
             product_type="celular", use_case="fotos", budget=2000.0
         ),
@@ -122,15 +103,16 @@ async def test_collect_ask_pass_complete_has_no_question(
     assert result["budget"] == BUDGET
     assert "messages" not in result
     structured_ainvoke.assert_awaited_once()
-    plain_ainvoke.assert_not_awaited()
+    llm.ainvoke.assert_not_awaited()
 
 
 @pytest.mark.anyio
 async def test_collect_collect_pass_interrupts_and_extracts(
     mocker: MockerFixture,
 ) -> None:
-    structured_ainvoke, _ = patch_structured_llm(
+    _, structured_ainvoke, _ = patch_structured_llm(
         mocker,
+        products_nodes,
         structured_return=CollectedInfo(
             product_type="celular", use_case="fotos", budget=2000.0
         ),
@@ -246,8 +228,8 @@ async def test_validate_keeps_all_without_budget() -> None:
 # --------------------------------------------------------------------------- #
 @pytest.mark.anyio
 async def test_present_resolves_user_choice(mocker: MockerFixture) -> None:
-    structured_ainvoke, _ = patch_structured_llm(
-        mocker, structured_return=ProductChoice(index=2)
+    _, structured_ainvoke, _ = patch_structured_llm(
+        mocker, products_nodes, structured_return=ProductChoice(index=2)
     )
     interrupt = mocker.patch.object(
         products_nodes, "interrupt", return_value="o segundo"
