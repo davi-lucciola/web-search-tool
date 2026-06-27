@@ -1,12 +1,14 @@
-from typing import TypedDict
+from typing import Annotated, TypedDict
 
-from langchain.agents import AgentState
+from langchain_core.messages import AnyMessage
+from langgraph.graph.message import add_messages
 
 
 # Formato JSON-native dos modelos guardados no estado do sub-grafo. Espelham o
 # `model_dump(mode='json')` dos respectivos modelos pydantic (Decimal vira string no
-# modo json). Guardar dicts tipados — e não objetos pydantic — evita que o checkpointer
-# tenha de desserializar tipos "não registrados" (msgpack), o que será bloqueado no futuro.
+# modo json). Guardar dicts tipados — e não objetos pydantic — evita que o
+# checkpointer tenha de desserializar tipos "não registrados" (msgpack), o que
+# será bloqueado no futuro.
 class RequirementsDict(TypedDict):
     product_type: str | None
     use_case: str | None
@@ -23,7 +25,8 @@ class ProductDict(TypedDict):
     key_features: list[str]
 
 
-class ProductSearchState(AgentState):
+class ProductSearchState(TypedDict):
+    messages: Annotated[list[AnyMessage], add_messages]
     requirements: RequirementsDict | None
     budget: float | None
     # Pergunta já gerada e exibida ao usuário, aguardando resposta. Persistida

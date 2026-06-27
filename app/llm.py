@@ -7,5 +7,5 @@ from app.config import Settings
 
 @lru_cache
 def get_llm():
-    settings = Settings()  # type: ignore[call-args]
+    settings = Settings()  # type: ignore
     return init_chat_model(settings.AGENT_CHAT_MODEL)
