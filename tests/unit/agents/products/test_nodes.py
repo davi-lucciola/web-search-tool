@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from langchain_core.language_models import BaseChatModel
@@ -43,7 +43,7 @@ def make_product(name: str = "Galaxy A17", price: str | None = "1500.00") -> Pro
 def product_dict(
     name: str = "Galaxy A17", price: str | None = "1500.00"
 ) -> ProductDict:
-    return make_product(name, price).model_dump(mode="json")
+    return cast(ProductDict, make_product(name, price).model_dump(mode="json"))
 
 
 BUDGET = 2000.0
@@ -90,7 +90,7 @@ async def test_collect_ask_pass_incomplete_returns_question(
         plain_return=AIMessage("Que tipo de produto você procura?"),
     )
 
-    state: ProductSearchState = {  # ty: ignore[missing-typed-dict-key]
+    state: ProductSearchState = {  # type: ignore
         "messages": [HumanMessage("oi")],
     }
     result = await collect_requirements_node(state)
@@ -113,9 +113,9 @@ async def test_collect_ask_pass_complete_has_no_question(
         ),
     )
 
-    state: ProductSearchState = {
+    state: ProductSearchState = {  # type: ignore
         "messages": [HumanMessage("quero um celular pra fotos até 2000")],
-    }  # type: ignore
+    }
     result = await collect_requirements_node(state)
 
     assert result["pending_question"] is None
@@ -140,7 +140,7 @@ async def test_collect_collect_pass_interrupts_and_extracts(
     )
 
     pending = "Qual seu orçamento máximo?"
-    state: ProductSearchState = {
+    state: ProductSearchState = {  # type: ignore
         "messages": [HumanMessage("oi")],
         "pending_question": pending,
     }
@@ -169,7 +169,7 @@ async def test_search_products_first_attempt_no_refine_hint(
         new=mocker.AsyncMock(return_value=[make_product()]),
     )
 
-    state: ProductSearchState = {  # ty: ignore[missing-typed-dict-key]
+    state: ProductSearchState = {  # type: ignore
         "requirements": COMPLETE_REQUIREMENTS,
         "budget": 2000.0,
     }
@@ -196,7 +196,7 @@ async def test_search_products_reloop_passes_refine_hint(
     )
 
     attempts = 1
-    state: ProductSearchState = {  # ty: ignore[missing-typed-dict-key]
+    state: ProductSearchState = {  # type: ignore
         "requirements": COMPLETE_REQUIREMENTS,
         "budget": BUDGET,
         "search_attempts": attempts,
@@ -215,7 +215,7 @@ async def test_search_products_reloop_passes_refine_hint(
 # --------------------------------------------------------------------------- #
 @pytest.mark.anyio
 async def test_validate_filters_products_over_budget() -> None:
-    state: ProductSearchState = {  # ty: ignore[missing-typed-dict-key]
+    state: ProductSearchState = {  # type: ignore
         "products": [
             product_dict("Barato", "1500.00"),
             product_dict("Caro", "2500.00"),
@@ -232,7 +232,7 @@ async def test_validate_filters_products_over_budget() -> None:
 @pytest.mark.anyio
 async def test_validate_keeps_all_without_budget() -> None:
     products = [product_dict("A", "1500.00"), product_dict("B", "9999.00")]
-    state: ProductSearchState = {  # ty: ignore[missing-typed-dict-key]
+    state: ProductSearchState = {  # type: ignore
         "products": products,
         "budget": None,
     }
@@ -258,7 +258,7 @@ async def test_present_resolves_user_choice(mocker: MockerFixture) -> None:
         product_dict("Segundo", "1500.00"),
         product_dict("Terceiro", "1800.00"),
     ]
-    state: ProductSearchState = {  # ty: ignore[missing-typed-dict-key]
+    state: ProductSearchState = {  # type: ignore
         "products": products,
     }
     result = await present_recommendations_node(state)
@@ -283,7 +283,7 @@ async def test_purchase_links_formats_found_links(mocker: MockerFixture) -> None
         new=mocker.AsyncMock(return_value=links),
     )
 
-    state: ProductSearchState = {  # ty: ignore[missing-typed-dict-key]
+    state: ProductSearchState = {  # type: ignore
         "chosen_product": product_dict("Galaxy A17"),
     }
     result = await search_purchase_links_node(state)
@@ -305,7 +305,7 @@ async def test_purchase_links_handles_empty_results(mocker: MockerFixture) -> No
         new=mocker.AsyncMock(return_value=[]),
     )
 
-    state: ProductSearchState = {  # ty: ignore[missing-typed-dict-key]
+    state: ProductSearchState = {  # type: ignore
         "chosen_product": product_dict("Galaxy A17"),
     }
     result = await search_purchase_links_node(state)
@@ -318,14 +318,14 @@ async def test_purchase_links_handles_empty_results(mocker: MockerFixture) -> No
 # Roteadores (síncronos)
 # --------------------------------------------------------------------------- #
 def test_route_after_collect_pending_question_loops() -> None:
-    state: ProductSearchState = {  # ty: ignore[missing-typed-dict-key]
+    state: ProductSearchState = {  # type: ignore
         "pending_question": "Qual seu orçamento?",
     }
     assert route_after_collect(state) == Nodes.COLLECT
 
 
 def test_route_after_collect_complete_goes_to_search() -> None:
-    state: ProductSearchState = {  # ty: ignore[missing-typed-dict-key]
+    state: ProductSearchState = {  # type: ignore
         "pending_question": None,
         "requirements": COMPLETE_REQUIREMENTS,
         "budget": 2000.0,
@@ -334,7 +334,7 @@ def test_route_after_collect_complete_goes_to_search() -> None:
 
 
 def test_route_after_collect_incomplete_loops() -> None:
-    state: ProductSearchState = {  # ty: ignore[missing-typed-dict-key]
+    state: ProductSearchState = {  # type: ignore
         "pending_question": None,
         "requirements": None,
         "budget": None,
@@ -343,7 +343,7 @@ def test_route_after_collect_incomplete_loops() -> None:
 
 
 def test_route_after_validate_enough_products_presents() -> None:
-    state: ProductSearchState = {  # ty: ignore[missing-typed-dict-key]
+    state: ProductSearchState = {  # type: ignore
         "products": [product_dict(f"P{i}") for i in range(TOP_PRODUCTS)],
         "search_attempts": 1,
     }
@@ -351,7 +351,7 @@ def test_route_after_validate_enough_products_presents() -> None:
 
 
 def test_route_after_validate_max_attempts_presents() -> None:
-    state: ProductSearchState = {  # ty: ignore[missing-typed-dict-key]
+    state: ProductSearchState = {  # type: ignore
         "products": [],
         "search_attempts": MAX_SEARCH_ATTEMPTS,
     }
@@ -359,7 +359,7 @@ def test_route_after_validate_max_attempts_presents() -> None:
 
 
 def test_route_after_validate_otherwise_searches_again() -> None:
-    state: ProductSearchState = {  # ty: ignore[missing-typed-dict-key]
+    state: ProductSearchState = {  # type: ignore
         "products": [product_dict("Único")],
         "search_attempts": 1,
     }
