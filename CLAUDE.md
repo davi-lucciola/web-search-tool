@@ -14,9 +14,8 @@ Tasks are defined in `pyproject.toml` under `[tool.taskipy.tasks]` and run via `
 uv run task main        # Run the agent once via main.py (one-shot ainvoke)
 uv run task langsmith   # Run LangGraph dev server (langgraph dev) with hot reload + LangSmith Studio
 uv sync                 # Install dependencies (including the dev group)
-uv run ruff check .     # Lint
-uv run ruff format .    # Format
-uv run pyright          # Type-check
+uv run task lint        # Lint + type-check (ty check && ruff check)
+uv run task format      # Format (ruff format)
 ```
 
 Both tasks load env vars from `.env` (copy `.env.example` to `.env`). There is no test suite yet.

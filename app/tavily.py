@@ -41,6 +41,25 @@ class TavilySearchResponse(TypedDict):
     request_id: str
 
 
+class TavilyExtractResult(TypedDict):
+    url: str
+    raw_content: str | None
+    images: list[str]
+    favicon: str
+
+
+class TavilyExtractFailure(TypedDict):
+    url: str
+    error: str
+
+
+class TavilyExtractResponse(TypedDict):
+    results: list[TavilyExtractResult]
+    failed_results: list[TavilyExtractFailure]
+    response_time: float
+
+
 @lru_cache
 def get_tavily_client() -> AsyncTavilyClient:
-    return AsyncTavilyClient(api_key=Settings().TAVILY_API_KEY)  # type: ignore[call-arg]
+    settings = Settings()  # type: ignore
+    return AsyncTavilyClient(api_key=settings.TAVILY_API_KEY)
