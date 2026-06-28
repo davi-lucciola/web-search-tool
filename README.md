@@ -51,9 +51,6 @@ Each agent is a package under `app/agents/` with a uniform layout:
 Each package's `__init__.py` exposes a `build_*_node()` that is passed to
 `builder.add_node(...)`.
 
-> ⚠️ The real products-agent package is `app/agents/products/`
-> (**not** `product_search`).
-
 ### Shared state
 
 `ChatState` (in `app/agents/states.py`) extends LangChain's `AgentState` — so it carries
