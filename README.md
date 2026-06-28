@@ -1,114 +1,112 @@
 # web-search-tool
 
-## 🔭 Visão geral
+## 🔭 Overview
 
-Agente conversacional construído com **LangGraph** (em português do Brasil) que
-ajuda o usuário a encontrar o produto com o **melhor custo-benefício** para o seu
-orçamento e necessidade.
+A conversational agent built with **LangGraph** (in Brazilian Portuguese) that helps
+the user find the product with the **best cost-benefit** for their budget and need.
 
-Ele segue um padrão **supervisor/router**: um supervisor lê a conversa e despacha
-o fluxo para sub-agentes especializados. A busca na web é feita com **Tavily**.
+It follows a **supervisor/router** pattern: a supervisor reads the conversation and
+dispatches the flow to specialized sub-agents. Web search is powered by **Tavily**.
 
-## 🏗️ Arquitetura
+## 🏗️ Architecture
 
-O grafo principal é compilado em `app/agents/__init__.py` e exposto como
-entrypoint `app.agents:make_graph` (id `grafo` no `langgraph.json`), além de ser
-exportado para `main.py`.
+The main graph is compiled in `app/agents/__init__.py` and exposed as the entrypoint
+`app.agents:make_graph` (id `grafo` in `langgraph.json`), as well as being exported to
+`main.py`.
 
-Fluxo do grafo principal:
+Main graph flow:
 
 ```
-START → supervisor → (condicional: guide | products) → END
+START → supervisor → (conditional: guide | products) → END
 ```
 
-### Nós e sub-agentes
+### Nodes and sub-agents
 
-- **Supervisor** (`app/agents/supervisor/`): LLM com
-  `with_structured_output(Router)` que lê o histórico de mensagens e escreve a
-  escolha em `state['next']`. Ele **apenas roteia** — não produz mensagem
-  voltada ao usuário.
-- **Guide** (`app/agents/guide/`): agente de recepção/boas-vindas. Explica o bot
-  e identifica a intenção do usuário. **Não** coleta orçamento/requisitos nem
-  executa buscas (isso é responsabilidade do agente de produtos).
-- **Products** (`app/agents/products/`): compila um subgrafo com etapas de
-  human-in-the-loop via `interrupt()`:
+- **Supervisor** (`app/agents/supervisor/`): an LLM with
+  `with_structured_output(Router)` that reads the message history and writes the chosen
+  agent into `state['next']`. It **only routes** — it does not produce user-facing
+  messages.
+- **Guide** (`app/agents/guide/`): the welcome/reception agent. Explains the bot and
+  identifies the user's intent. It does **not** collect budget/requirements or run
+  searches (that is the products agent's responsibility).
+- **Products** (`app/agents/products/`): compiles a subgraph with human-in-the-loop
+  steps via `interrupt()`:
 
   ```
   collect_requirements → search_products → validate_products → present_recommendations → search_purchase_links
   ```
 
-  - `tools.py` roda as buscas no Tavily.
-  - `nodes.py` contém os passos do subgrafo e os routers.
+  - `tools.py` runs the Tavily searches.
+  - `nodes.py` holds the subgraph steps and the routers.
 
-### Convenção de pacotes
+### Package convention
 
-Cada agente é um pacote sob `app/agents/` com layout uniforme:
+Each agent is a package under `app/agents/` with a uniform layout:
 
 - `prompt.py` — prompts.
-- `schemas.py` — modelos pydantic de structured-output.
-- `agent.py` — a função `build_*_agent`.
-- No subgrafo **products** também há `state.py`, `tools.py` e `nodes.py`.
+- `schemas.py` — pydantic structured-output models.
+- `agent.py` — the `build_*_agent` function.
+- The **products** subgraph also has `state.py`, `tools.py` and `nodes.py`.
 
-O `__init__.py` de cada pacote expõe um `build_*_node()` que é passado para
+Each package's `__init__.py` exposes a `build_*_node()` that is passed to
 `builder.add_node(...)`.
 
-> ⚠️ O pacote real do agente de produtos é `app/agents/products/`
-> (**não** `product_search`).
+> ⚠️ The real products-agent package is `app/agents/products/`
+> (**not** `product_search`).
 
-### Estado compartilhado
+### Shared state
 
-`ChatState` (em `app/agents/states.py`) estende o `AgentState` do LangChain — por
-isso carrega `messages` — e adiciona o campo `next`, com um reducer customizado
-`take_latest_nonempty` que mantém a última decisão de roteamento não vazia.
+`ChatState` (in `app/agents/states.py`) extends LangChain's `AgentState` — so it carries
+`messages` — and adds the `next` field, with a custom `take_latest_nonempty` reducer that
+keeps the latest non-empty routing decision.
 
 ## 🧰 Stack
 
 - **Python 3.13**
 - **LangGraph / LangChain**
-- **Tavily** (busca web)
-- **pydantic-settings** (configuração via ambiente)
-- **uv** (gerenciador de pacotes/execução)
+- **Tavily** (web search)
+- **pydantic-settings** (configuration via environment)
+- **uv** (package manager / runner)
 - **Ruff** (lint + format)
-- **Pyright** (type checking em modo strict)
+- **Pyright** (type checking, strict mode)
 - **Taskipy** (tasks)
 
 ## ⚙️ Setup
 
-1. Instale as dependências (inclui o grupo de dev):
+1. Install the dependencies (includes the dev group):
 
    ```bash
    uv sync
    ```
 
-2. Crie o arquivo `.env` a partir do exemplo e preencha as chaves:
+2. Create the `.env` file from the example and fill in the keys:
 
    ```bash
    cp .env.example .env
    ```
 
-### Variáveis de ambiente
+### Environment variables
 
-| Variável | Descrição |
+| Variable | Description |
 | --- | --- |
-| `AGENT_CHAT_MODEL` | Modelo do agente, **prefixado pelo provider** (ex.: `openai:gpt-4.1-nano` ou `google_genai:gemini-2.5-flash`). |
-| `OPENAI_API_KEY` | Chave da OpenAI (se usar um modelo `openai:`). |
-| `GOOGLE_API_KEY` | Chave do Google (se usar um modelo `google_genai:`). |
-| `TAVILY_API_KEY` | Chave da API do Tavily para a busca web. |
-| `LANGSMITH_TRACING` | Ativa o tracing no LangSmith (`true`/`false`). |
-| `LANGSMITH_ENDPOINT` | Endpoint do LangSmith (ex.: `https://api.smith.langchain.com`). |
-| `LANGSMITH_API_KEY` | Chave da API do LangSmith. |
-| `LANGSMITH_PROJECT` | Nome do projeto no LangSmith. |
+| `AGENT_CHAT_MODEL` | Agent model, **provider-prefixed** (e.g. `openai:gpt-4.1-nano` or `google_genai:gemini-2.5-flash`). |
+| `OPENAI_API_KEY` | OpenAI key (if using an `openai:` model). |
+| `GOOGLE_API_KEY` | Google key (if using a `google_genai:` model). |
+| `TAVILY_API_KEY` | Tavily API key for web search. |
+| `LANGSMITH_TRACING` | Enables LangSmith tracing (`true`/`false`). |
+| `LANGSMITH_ENDPOINT` | LangSmith endpoint (e.g. `https://api.smith.langchain.com`). |
+| `LANGSMITH_API_KEY` | LangSmith API key. |
+| `LANGSMITH_PROJECT` | LangSmith project name. |
 
-## ▶️ Como rodar
+## ▶️ How to run
 
-As tasks ficam em `[tool.taskipy.tasks]` no `pyproject.toml` e são executadas via
-`uv`:
+Tasks live under `[tool.taskipy.tasks]` in `pyproject.toml` and run via `uv`:
 
 ```bash
-uv run task main      # Executa o agente uma vez via main.py (ainvoke one-shot)
+uv run task main      # Run the agent once via main.py (one-shot ainvoke)
 uv run task lint      # Type-check + lint (pyright && ruff check)
-uv run task format    # Formata o código (ruff format)
-uv run task test      # Roda os testes com cobertura (pytest --cov)
+uv run task format    # Format the code (ruff format)
+uv run task test      # Run the tests with coverage (pytest --cov)
 ```
 
 ## 🧪 LangGraph Studio + LangSmith
@@ -117,56 +115,52 @@ uv run task test      # Roda os testes com cobertura (pytest --cov)
 uv run task langsmith
 ```
 
-Esse comando roda `langgraph dev --config ./langgraph.json` com **hot reload** e
-abre o **LangGraph Studio**. O tracing no **LangSmith** é ativado pelas variáveis
-`LANGSMITH_*` no `.env`.
+This command runs `langgraph dev --config ./langgraph.json` with **hot reload** and opens
+**LangGraph Studio**. **LangSmith** tracing is enabled by the `LANGSMITH_*` variables in
+`.env`.
 
 ## 🔎 Type checking
 
-Usamos **Pyright** (o engine por trás do Pylance) tanto no editor quanto no CLI
-`uv run task lint`. Um único engine garante que editor e CLI concordem. A config
-fica em `[tool.pyright]` no `pyproject.toml`, e o Pylance a lê automaticamente.
+We use **Pyright** (the engine behind Pylance) both in the editor and in the
+`uv run task lint` CLI. A single engine keeps the editor and CLI in agreement. The config
+lives in `[tool.pyright]` in `pyproject.toml`, and Pylance reads it automatically.
 
-O modo é `typeCheckingMode = "strict"`, com **três regras desabilitadas**:
+The mode is `typeCheckingMode = "strict"`, with **three rules disabled**:
 
 - `reportUnknownMemberType`
 - `reportUnknownVariableType`
 - `reportUnknownArgumentType`
 
-Elas são desabilitadas porque disparam em tipos `Unknown` que **vazam dos stubs
-incompletos do LangChain/LangGraph** — não do nosso código. Mantê-las ligadas
-geraria dezenas de erros a cada chamada de LLM e enterraria os erros reais. As
-nossas próprias assinaturas continuam estritas via `reportUnknownParameterType` /
-`reportMissingParameterType`, que permanecem **ligadas**.
+They are disabled because they fire on `Unknown` types that **leak out of the incomplete
+LangChain/LangGraph stubs** — not out of our code. Keeping them on would produce dozens of
+errors on every LLM call and bury the real ones. Our own signatures stay strict via
+`reportUnknownParameterType` / `reportMissingParameterType`, which remain **on**.
 
-De onde vêm os `Unknown`:
+Where the `Unknown`s come from:
 
-- `BaseChatModel.with_structured_output()` é declarado como
-  `Runnable[..., dict[str, Any] | BaseModel]`; o braço `dict[str, Any]` é um
-  vazamento de `Any`, então qualquer acesso a membro no resultado vira `Unknown`.
-- `init_chat_model` pode retornar a classe privada `_ConfigurableModel`, cujos
-  métodos (`.ainvoke`, `.with_structured_output`) são frouxamente tipados — por
-  isso o resultado de `get_llm()` é sinalizado.
-- Passar adiante o resultado `dict[str, Any] | BaseModel` de `.ainvoke()` (ex.:
-  para um dict de estado parcial como `{"next": router.next}`) propaga o `Any`
-  para o call site.
+- `BaseChatModel.with_structured_output()` is declared as
+  `Runnable[..., dict[str, Any] | BaseModel]`; the `dict[str, Any]` arm is an `Any` leak,
+  so any member access on the result becomes `Unknown`.
+- `init_chat_model` can return the private `_ConfigurableModel` class, whose methods
+  (`.ainvoke`, `.with_structured_output`) are loosely typed — which is why the result of
+  `get_llm()` is flagged.
+- Passing the `dict[str, Any] | BaseModel` result of `.ainvoke()` onward (e.g. into a
+  partial-state dict like `{"next": router.next}`) propagates the `Any` to the call site.
 
 ### `StateGraph` + `TypedDict`
 
-`StateGraph.__init__(state_schema: type[StateT])` recebe um `TypedDict`
-(`ChatState`, `ProductSearchState`). O type checker antigo (`ty`) rejeitava isso
-com `invalid-argument-type`, o que motivava os antigos comentários
-`# ty: ignore[...]`. O **Pyright modela `type[SomeTypedDict]` corretamente**,
-então esses ignores eram desnecessários e foram removidos. O estado com reducers
-— `Annotated[list[AnyMessage], add_messages]` e o `take_latest_nonempty`
-customizado — também é entendido pelo Pyright, sem necessidade de ignores.
+`StateGraph.__init__(state_schema: type[StateT])` takes a `TypedDict` (`ChatState`,
+`ProductSearchState`). The old type checker (`ty`) rejected this with
+`invalid-argument-type`, which motivated the old `# ty: ignore[...]` comments. **Pyright
+models `type[SomeTypedDict]` correctly**, so those ignores were unnecessary and have been
+removed. Reducer state — `Annotated[list[AnyMessage], add_messages]` and the custom
+`take_latest_nonempty` — is also understood by Pyright, with no ignores needed.
 
-### Um erro real que o strict pegou
+### A real error strict mode caught
 
-O strict não é só ruído de stub. Ao ligá-lo, surgiu
-`reportTypedDictNotRequiredAccess` em `app/agents/__init__.py`: `next` é declarado
-`NotRequired[NextNode]` em `ChatState`, então subscrever `state["next"]` pode
-levantar em runtime se a chave estiver ausente. O supervisor sempre escreve
-`next` antes da edge condicional rodar, então a correção usa
-`state.get("next", "")` — type-safe e preservando o comportamento (o default
-espelha o fallback `current or ""` do próprio reducer `take_latest_nonempty`).
+Strict mode is not only stub noise. Enabling it surfaced
+`reportTypedDictNotRequiredAccess` in `app/agents/__init__.py`: `next` is declared
+`NotRequired[NextNode]` on `ChatState`, so subscripting `state["next"]` can raise at
+runtime if the key is absent. The supervisor always writes `next` before the conditional
+edge runs, so the fix uses `state.get("next", "")` — type-safe and behavior-preserving
+(the default mirrors the `take_latest_nonempty` reducer's own `current or ""` fallback).
