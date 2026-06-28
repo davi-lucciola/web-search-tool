@@ -19,9 +19,16 @@ dev = [
     "langgraph-cli[inmem]>=0.4.30",
     "pytest>=8.3.5",
     "pytest-cov>=6.1.1",
+    "anyio>=4.0",
+    "pytest-anyio>=0.0.0",
+    "pytest-mock>=3.14",
     "ruff>=0.11.11",
     "ty>=0.0.55",
 ]
+
+[tool.pytest.ini_options]
+pythonpath = "."
+addopts = "-p no:warnings"
 
 [tool.ruff]
 line-length = 88
@@ -53,4 +60,6 @@ reportMissingTypeStubs = false
 main = "uv run --env-file=.env main.py"
 lint = "ty check && ruff check"
 format = "ruff format"
+test = "pytest -s -x --cov=app tests/unit -vv"
+post_test = "coverage html --dir=.htmlcov"
 langsmith = "uv run --env-file=.env langgraph dev --config ./langgraph.json"
