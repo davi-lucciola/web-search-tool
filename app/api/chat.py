@@ -1,7 +1,7 @@
 import json
 from typing import Any, AsyncGenerator, cast
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends
 from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph.state import CompiledStateGraph
@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
 from app.agents.constants import Nodes
+from app.api.dependencies import Agent, get_agent
 
 router = APIRouter(prefix='/threads', tags=['chat'])
 
@@ -50,9 +51,7 @@ async def _final_message(
 
 
 async def _event_stream(
-    agent: CompiledStateGraph[Any, Any, Any],
-    graph_input: Any,
-    config: RunnableConfig,
+    agent: Agent, graph_input: Any, config: RunnableConfig
 ) -> AsyncGenerator[dict[str, str]]:
     interrupted = False
 
@@ -82,6 +81,7 @@ async def _event_stream(
         # `message` = texto final autoritativo do turno concluído (o cliente pode
         # substituir os tokens incrementais por ele).
         text = await _final_message(agent, config)
+
         if text:
             yield {'event': 'message', 'data': text}
 
@@ -89,13 +89,13 @@ async def _event_stream(
 
 
 @router.post('/{thread_id}/chat')
-async def chat(thread_id: str, req: ChatRequest, request: Request):
-    agent: CompiledStateGraph[Any, Any, Any] = request.app.state.agent
+async def chat(
+    thread_id: str,
+    req: ChatRequest,
+    agent: Agent = Depends(get_agent),
+):
     config: RunnableConfig = {'configurable': {'thread_id': thread_id}}
 
-    # Decide resume vs nova mensagem a partir do estado persistido no Postgres
-    # (em vez da variável `result` em memória do main.py): se há interrupt pendente
-    # para esta thread, a mensagem que chegou é a resposta a essa pausa.
     snapshot = await agent.aget_state(config)
     pending = bool(getattr(snapshot, 'interrupts', None))
 

@@ -69,7 +69,8 @@ reportUnknownArgumentType = false
 
 
 [tool.taskipy.tasks]
-main = "uv run --env-file=.env main.py"
+dev = "uv run --env-file=.env uvicorn main:app --reload"
+start = "uv run --env-file=.env uvicorn main:app --host 0.0.0.0 --port 8000"
 lint = "pyright && ruff check"
 format = "ruff format"
 pre_format = "task lint"
@@ -77,4 +78,3 @@ test = "pytest -s -x --cov=app tests/unit -vv"
 pre_test = "task lint"
 post_test = "coverage html --dir=.htmlcov"
 langsmith = "uv run --env-file=.env langgraph dev --config ./langgraph.json"
-api = "uv run --env-file=.env uvicorn app:app --reload"
