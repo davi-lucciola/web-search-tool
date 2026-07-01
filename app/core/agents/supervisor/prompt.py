@@ -1,4 +1,4 @@
-from app.agents.constants import AGENTS_DESCRIPTION, Agents
+from app.core.agents.constants import AGENTS_DESCRIPTION, Agents
 
 SUPERVISOR_SYSTEM_PROMPT = f"""
 Você é um agente responsavel por direcionar uma conversa para o agente correto.

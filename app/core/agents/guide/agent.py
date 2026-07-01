@@ -1,7 +1,7 @@
 from langchain_core.messages import SystemMessage
 
-from app.agents.guide.prompt import GUIDE_SYSTEM_PROMPT
-from app.agents.states import ChatState
+from app.core.agents.guide.prompt import GUIDE_SYSTEM_PROMPT
+from app.core.agents.states import ChatState
 from app.infra.llm import get_llm
 
 

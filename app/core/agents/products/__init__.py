@@ -1,4 +1,4 @@
-from app.agents.products.agent import build_product_search_agent
+from app.core.agents.products.agent import build_product_search_agent
 
 
 def build_product_search_node():

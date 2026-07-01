@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from app.agents.constants import Agents
+from app.core.agents.constants import Agents
 
 
 class Router(BaseModel):

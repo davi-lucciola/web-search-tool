@@ -1,22 +1,12 @@
 import json
 from typing import Any, AsyncGenerator, cast
 
-from fastapi import APIRouter, Depends
-from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage
+from langchain_core.messages import AIMessage, AIMessageChunk
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph.state import CompiledStateGraph
-from langgraph.types import Command
-from pydantic import BaseModel
-from sse_starlette.sse import EventSourceResponse
 
-from app.agents.constants import Nodes
-from app.api.dependencies import Agent, get_agent
-
-router = APIRouter(prefix='/threads', tags=['chat'])
-
-
-class ChatRequest(BaseModel):
-    message: str
+from app.api.deps import Agent
+from app.core.agents.constants import Nodes
 
 
 def _interrupt_value(mode: str, payload: Any) -> Any:
@@ -28,8 +18,10 @@ def _interrupt_value(mode: str, payload: Any) -> Any:
     """
     if mode == 'updates' and isinstance(payload, dict) and '__interrupt__' in payload:
         interrupts = payload['__interrupt__']
+
         if interrupts:
             return interrupts[0].value
+
     return None
 
 
@@ -50,7 +42,7 @@ async def _final_message(
     return last_ai.text if last_ai is not None else None
 
 
-async def _event_stream(
+async def event_stream(
     agent: Agent, graph_input: Any, config: RunnableConfig
 ) -> AsyncGenerator[dict[str, str]]:
     interrupted = False
@@ -86,23 +78,3 @@ async def _event_stream(
             yield {'event': 'message', 'data': text}
 
     yield {'event': 'done', 'data': ''}
-
-
-@router.post('/{thread_id}/chat')
-async def chat(
-    thread_id: str,
-    req: ChatRequest,
-    agent: Agent = Depends(get_agent),
-):
-    config: RunnableConfig = {'configurable': {'thread_id': thread_id}}
-
-    snapshot = await agent.aget_state(config)
-    pending = bool(getattr(snapshot, 'interrupts', None))
-
-    graph_input: Any = (
-        Command(resume=req.message)
-        if pending
-        else {'messages': [HumanMessage(req.message)], 'next': ''}
-    )
-
-    return EventSourceResponse(_event_stream(agent, graph_input, config))

@@ -4,11 +4,11 @@ from langchain_core.exceptions import OutputParserException
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import ValidationError
 
-from app.agents.products.prompt import (
+from app.core.agents.products.prompt import (
     FIND_PRODUCTS_PROMPT,
     FIND_PURCHASE_LINKS_PROMPT,
 )
-from app.agents.products.schemas import (
+from app.core.agents.products.schemas import (
     Product,
     ProductRecommendations,
     PurchaseLink,

@@ -1,7 +1,7 @@
 from fastapi import Request
 from langgraph.graph.state import CompiledStateGraph
 
-from app.agents.states import ChatState
+from app.core.agents.states import ChatState
 
 
 def get_agent(

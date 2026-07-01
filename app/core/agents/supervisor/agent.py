@@ -1,8 +1,8 @@
 from langchain_core.messages import SystemMessage
 
-from app.agents.states import ChatState
-from app.agents.supervisor.prompt import SUPERVISOR_SYSTEM_PROMPT
-from app.agents.supervisor.schemas import Router
+from app.core.agents.states import ChatState
+from app.core.agents.supervisor.prompt import SUPERVISOR_SYSTEM_PROMPT
+from app.core.agents.supervisor.schemas import Router
 from app.infra.llm import get_llm
 
 

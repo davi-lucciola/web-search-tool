@@ -8,20 +8,20 @@ from langchain_core.messages import (
 )
 from langgraph.types import interrupt
 
-from app.agents.products.constants import Nodes
-from app.agents.products.prompt import (
+from app.core.agents.products.constants import Nodes
+from app.core.agents.products.prompt import (
     ASK_REQUIREMENTS_PROMPT,
     EXTRACT_REQUIREMENTS_PROMPT,
 )
-from app.agents.products.schemas import (
+from app.core.agents.products.schemas import (
     CollectedInfo,
     Product,
     ProductChoice,
     PurchaseLink,
     Requirements,
 )
-from app.agents.products.state import ProductSearchState
-from app.agents.products.tools import (
+from app.core.agents.products.state import ProductSearchState
+from app.core.agents.products.tools import (
     deep_search_purchase_links,
     search_candidates,
 )
