@@ -4,18 +4,13 @@ from typing import Any, AsyncIterator
 
 import pytest
 from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage
-from langgraph.types import Command
 from pytest_mock import MockerFixture
-from sse_starlette.sse import EventSourceResponse
 
-from app.agents.constants import Nodes
-from app.api import chat as chat_module
-from app.api.chat import (
-    ChatRequest,
-    _event_stream,  # pyright: ignore[reportPrivateUsage]
+from app.core.agents.constants import Nodes
+from app.core.services.chat import (
     _final_message,  # pyright: ignore[reportPrivateUsage]
     _interrupt_value,  # pyright: ignore[reportPrivateUsage]
-    chat,
+    event_stream,
 )
 
 CONFIG: Any = {'configurable': {'thread_id': 't1'}}
@@ -122,10 +117,10 @@ async def test_final_message_none_when_no_messages(mocker: MockerFixture) -> Non
 
 
 # --------------------------------------------------------------------------- #
-# _event_stream (async generator — núcleo)
+# event_stream (async generator — núcleo)
 # --------------------------------------------------------------------------- #
 async def _collect(agent: Any) -> list[dict[str, str]]:
-    return [event async for event in _event_stream(agent, {}, CONFIG)]
+    return [event async for event in event_stream(agent, {}, CONFIG)]
 
 
 @pytest.mark.anyio
@@ -205,37 +200,3 @@ async def test_event_stream_only_done_when_no_final_message(
     events = await _collect(agent)
 
     assert events == [{'event': 'done', 'data': ''}]
-
-
-# --------------------------------------------------------------------------- #
-# chat (endpoint, async)
-# --------------------------------------------------------------------------- #
-@pytest.mark.anyio
-async def test_chat_new_message_when_no_pending_interrupt(
-    mocker: MockerFixture,
-) -> None:
-    agent = make_agent(mocker, interrupts=None)
-    stream = mocker.patch.object(chat_module, '_event_stream', return_value=_aiter([]))
-
-    response = await chat('t1', ChatRequest(message='quero um celular'), agent)
-
-    assert isinstance(response, EventSourceResponse)
-    agent.aget_state.assert_awaited_once_with(CONFIG)
-    graph_input = stream.call_args.args[1]
-    assert graph_input['next'] == ''
-    assert isinstance(graph_input['messages'][0], HumanMessage)
-    assert graph_input['messages'][0].content == 'quero um celular'
-    assert stream.call_args.args[2] == CONFIG
-
-
-@pytest.mark.anyio
-async def test_chat_resumes_when_pending_interrupt(mocker: MockerFixture) -> None:
-    agent = make_agent(mocker, interrupts=[SimpleNamespace(value='?')])
-    stream = mocker.patch.object(chat_module, '_event_stream', return_value=_aiter([]))
-
-    response = await chat('t1', ChatRequest(message='2000 reais'), agent)
-
-    assert isinstance(response, EventSourceResponse)
-    graph_input = stream.call_args.args[1]
-    assert isinstance(graph_input, Command)
-    assert graph_input.resume == '2000 reais'

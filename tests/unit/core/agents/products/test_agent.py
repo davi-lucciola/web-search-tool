@@ -1,5 +1,5 @@
-from app.agents.products.agent import build_product_search_agent
-from app.agents.products.constants import Nodes
+from app.core.agents.products.agent import build_product_search_agent
+from app.core.agents.products.constants import Nodes
 
 
 def test_compiles_subgraph_with_all_nodes() -> None:

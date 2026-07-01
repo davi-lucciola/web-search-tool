@@ -5,9 +5,9 @@ import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 from pytest_mock import MockerFixture
 
-from app.agents.products import nodes as products_nodes
-from app.agents.products.constants import Nodes
-from app.agents.products.nodes import (
+from app.core.agents.products import nodes as products_nodes
+from app.core.agents.products.constants import Nodes
+from app.core.agents.products.nodes import (
     MAX_SEARCH_ATTEMPTS,
     TOP_PRODUCTS,
     collect_requirements_node,
@@ -18,14 +18,18 @@ from app.agents.products.nodes import (
     search_purchase_links_node,
     validate_products_node,
 )
-from app.agents.products.schemas import (
+from app.core.agents.products.schemas import (
     CollectedInfo,
     Product,
     ProductChoice,
     PurchaseLink,
     Requirements,
 )
-from app.agents.products.state import ProductDict, ProductSearchState, RequirementsDict
+from app.core.agents.products.state import (
+    ProductDict,
+    ProductSearchState,
+    RequirementsDict,
+)
 from tests.utils import patch_structured_llm
 
 

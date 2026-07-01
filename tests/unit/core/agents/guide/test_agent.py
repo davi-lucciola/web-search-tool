@@ -2,10 +2,10 @@ import pytest
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from pytest_mock import MockerFixture
 
-from app.agents.guide import agent as guide_agent
-from app.agents.guide.agent import build_guide_agent
-from app.agents.guide.prompt import GUIDE_SYSTEM_PROMPT
-from app.agents.states import ChatState
+from app.core.agents.guide import agent as guide_agent
+from app.core.agents.guide.agent import build_guide_agent
+from app.core.agents.guide.prompt import GUIDE_SYSTEM_PROMPT
+from app.core.agents.states import ChatState
 from tests.utils import patch_structured_llm
 
 

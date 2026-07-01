@@ -2,12 +2,12 @@ import pytest
 from langchain_core.messages import HumanMessage, SystemMessage
 from pytest_mock import MockerFixture
 
-from app.agents.constants import Agents
-from app.agents.states import ChatState
-from app.agents.supervisor import agent as supervisor_agent
-from app.agents.supervisor.agent import build_supervisor_agent
-from app.agents.supervisor.prompt import SUPERVISOR_SYSTEM_PROMPT
-from app.agents.supervisor.schemas import Router
+from app.core.agents.constants import Agents
+from app.core.agents.states import ChatState
+from app.core.agents.supervisor import agent as supervisor_agent
+from app.core.agents.supervisor.agent import build_supervisor_agent
+from app.core.agents.supervisor.prompt import SUPERVISOR_SYSTEM_PROMPT
+from app.core.agents.supervisor.schemas import Router
 from tests.utils import patch_structured_llm
 
 
